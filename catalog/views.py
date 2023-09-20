@@ -1,0 +1,119 @@
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.cache import cache
+from django.forms import inlineformset_factory
+from django.http import Http404
+from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views.generic import ListView, DetailView, UpdateView, CreateView, DeleteView
+from catalog.models import Product, Version, Category
+from catalog.services import get_cached_versons_for_product, get_category_list
+
+
+class CategoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = 'catalog.view_category'
+    model = Category
+    template_name = 'catalog/categories.html'
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['object_list'] = get_category_list()
+        return context_data
+
+
+class ProductCreateView(CreateView):
+    model = Product
+    permission_required = 'catalog.add_product'
+    success_url = reverse_lazy('catalog:home')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        SubjectFormset = inlineformset_factory(Product, Version, extra=1)
+        if self.request.method == 'POST':
+            context_data['formset'] = SubjectFormset(self.request.POST, instance=self.object)
+        else:
+            context_data['formset'] = SubjectFormset(instance=self.object)
+
+        return context_data
+
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    permission_required = 'catalog.change_product'
+    success_url = reverse_lazy('catalog:home')
+
+    def get_object(self, queryset=None):
+        self.object = super().get_object(queryset)
+        if self.object.owner != self.request.user:
+            raise Http404
+        return self.object
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        SubjectFormset = inlineformset_factory(Product, Version, extra=1)
+        if self.request.method == 'POST':
+            context_data['formset'] = SubjectFormset(self.request.POST, instance=self.object)
+        else:
+            context_data['formset'] = SubjectFormset(instance=self.object)
+
+        return context_data
+
+    def form_valid(self, form):
+        formset = self.get_context_data()['formset']
+        self.object = form.save()
+
+        if formset.is_valid():
+            formset.instance = self.object
+            formset.save()
+
+        return super().form_valid(form)
+
+
+class ProductDeleteView(DeleteView):
+    permission_required = 'catalog.delete_product'
+    model = Product
+    success_url = reverse_lazy('catalog:home')
+
+
+class ProductListView(ListView):
+    permission_required = 'catalog.view_product'
+    model = Product
+    template_name = 'catalog/home.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context_data = super().get_context_data(*args, **kwargs)
+        version_list = Version.objects.all()
+        context_data['formset'] = version_list
+        return context_data
+
+
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    model = Product
+    template_name = 'catalog/card.html'
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['versions'] = get_cached_versons_for_product(self.object.pk)
+        return context_data
+
+
+@login_required()
+def contacts(request):
+    if request.method == 'POST' or request.method == 'GET':
+        name = request.POST.get('name')
+        phone = request.POST.get('phone')
+        message = request.POST.get('message')
+        print(f"{name} ({phone}): {message}")
+
+    context = {
+        'title': 'Контакты',
+    }
+    return render(request, 'catalog/contacts.html', context)
