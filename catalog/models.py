@@ -1,8 +1,11 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 from django.db import models
 
 NULLABLE = {'null': True, 'blank': True}
-
+User = get_user_model()
 
 # Create your models here.
 class Category(models.Model):
@@ -55,11 +58,27 @@ class Version(models.Model):
     version_name = models.CharField(max_length=150, verbose_name='название версии')
     version_sing = models.BooleanField(default=False, verbose_name='признак текущей версии')
 
+
+class Record(models.Model):
+    record_title = models.CharField(max_length=150, verbose_name='Заголовок')
+    slug = models.SlugField(max_length=255, unique=True, db_index=True, verbose_name="URL")
+    content = models.TextField(max_length=15000, verbose_name='Содержимое')
+    preview = models.ImageField(upload_to='image/', verbose_name='Изображение', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now=True, verbose_name='Дата создания')
+    sign_of_publication = models.BooleanField(default=True, verbose_name='Признак публикации')
+    views = models.IntegerField(default=0)
+
     def __str__(self):
-        return f'{self.product} Версия:{self.version_name}'
+        return self.record_title
+
+    def get_absolute_url(self):
+        return reverse('record_detail', kwargs={'slug': self.slug})
 
     class Meta:
-        verbose_name = 'продукт'
-        verbose_name_plural = 'продукты'
+        verbose_name = 'запись'
+        verbose_name_plural = 'записи'
+        ordering = ('record_title', 'slug', 'created_at', 'sign_of_publication')
 
-
+    def increase_views(self):
+        self.views += 1
+        self.save()

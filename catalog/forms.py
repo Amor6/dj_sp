@@ -1,49 +1,39 @@
 from django import forms
-from catalog.models import Product, Version, Category
-from django.shortcuts import redirect
-
-
-class StyleFormMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            field.widget.attrs['class'] = 'form-control'
-
-
-class CategoryForm(StyleFormMixin, forms.ModelForm):
-    model = Category
-    exclude = '__all__'
-
-
-class ProductForm(StyleFormMixin, forms.ModelForm):
-    class Meta:
-        model = Product
-        exclude = ('owner',)
-
-    def clean_product_name(self):
-        cleaned_data = self.cleaned_data['product_name']
-        cleaned_list = cleaned_data.replace('.', '').split()
-
-        forbidden_words = (
-            'казино', 'криптовалюта', 'крипта', 'биржа', 'дешево', 'бесплатно', 'обман', 'полиция', 'радар')
-        for word in cleaned_list:
-            if word in forbidden_words:
-                raise forms.ValidationError('Недопустимые слова/символы')
-        return cleaned_data
-
-    def clean_description(self):
-        cleaned_data = self.cleaned_data['description']
-        cleaned_list = cleaned_data.replace('.', '').split()
-
-        forbidden_words = (
-            'казино', 'криптовалюта', 'крипта', 'биржа', 'дешево', 'бесплатно', 'обман', 'полиция', 'радар')
-        for word in cleaned_list:
-            if word in forbidden_words:
-                raise forms.ValidationError('Недопустимые слова/символы')
-        return cleaned_data
+from django.forms import formset_factory
+from .models import Version, Product, Category
 
 
 class VersionForm(forms.ModelForm):
     class Meta:
         model = Version
-        fields = '__all__'
+        fields = ['version_number', 'version_name', 'is_current_version']
+
+
+VersionFormSet = formset_factory(VersionForm, extra=1)
+
+
+class ProductForm(forms.ModelForm):
+    category = forms.ModelChoiceField(queryset=Category.objects.all())
+
+    class Meta:
+        model = Product
+        fields = ['name', 'description', 'price', 'image', 'category']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get('name')
+        description = cleaned_data.get('description')
+
+        if name is not None and description is not None:
+            prohibited_words = ['казино', 'криптовалюта', 'крипта', 'биржа', 'дешево', 'бесплатно', 'обман', 'полиция', 'радар']
+            for word in prohibited_words:
+                if word.lower() in name.lower() or word.lower() in description.lower():
+                    raise forms.ValidationError(
+                        f"Запрещенное слово '{word}' не может быть использовано в названии или описании продукта.")
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.category = self.cleaned_data['category']  # Сохраняем выбранную категорию
+        if commit:
+            instance.save()
+        return instance
