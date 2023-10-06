@@ -7,7 +7,7 @@ from django.http import Http404
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import render
 from django.urls import reverse_lazy
-from django.views.generic import ListView, DetailView, UpdateView, CreateView, DeleteView
+from django.views.generic import ListView, DetailView, UpdateView, CreateView, TemplateView
 from catalog.models import Product, Version, Category, Record
 from catalog.services import get_cached_versons_for_product, get_category_list
 
@@ -149,15 +149,8 @@ class RecordCreateView(CreateView):
 
 
 
-@login_required()
-def contacts(request):
-    if request.method == 'POST' or request.method == 'GET':
-        name = request.POST.get('name')
-        phone = request.POST.get('phone')
-        message = request.POST.get('message')
-        print(f"{name} ({phone}): {message}")
-
-    context = {
-        'title': 'Контакты',
+class ContactView(TemplateView):
+    template_name = 'contacts.html'
+    extra_context = {
+        'title': 'Контакты'
     }
-    return render(request, 'catalog/contacts.html', context)
