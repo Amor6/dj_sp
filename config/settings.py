@@ -1,10 +1,11 @@
 from pathlib import Path
-
+from dotenv import load_dotenv
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -151,7 +152,25 @@ SESSION_COOKIE_SECURE=False
 CSRF_COOKIE_SECURE=False
 PASSWORD_RESET_EMAIL_TEMPLATE = 'registration/password_reset.html'
 
-CACHE_ENABLED = True
+# CACHE_ENABLED = os.getenv('CACHE_ENABLED') == 'True'
+
+# CACHES = {
+#     "default": {
+#           "BACKEND": "django.core.backends.redis.RedisCache",
+#           "LOCATION": os.getenv("CACHE_LOCATION"),
+#      }
+#  }
+
+CACHE_ENABLED = False
+if CACHE_ENABLED:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.getenv('CACHE_LOCATION'),
+            "TIMEOUT": 300,  # Ручная регулировка времени жизни кеша в секундах, по умолчанию 300
+        }
+    }
+
 
 MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
