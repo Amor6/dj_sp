@@ -9,8 +9,8 @@ from catalog.views import ProductListView, CategoryListView, ProductDetailView, 
 app_name = CatalogConfig.name
 
 urlpatterns = [
-    path('', cache_page(60)(ProductListView.as_view()), name='home'),
-    path('categories/', cache_page(60)(CategoryListView.as_view()), name='categories'),
+    path('',ProductListView.as_view(), name='home'),
+    path('categories/', CategoryListView.as_view(), name='categories'),
     path('contacts/', ContactView.as_view(template_name='catalog/contacts.html'), name='contacts'),
     path('cards/<int:pk>/', ProductDetailView.as_view(template_name='catalog/product_detail.html'), name='product'),
     path('create/', ProductCreateView.as_view(), name='create_product'),

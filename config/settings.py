@@ -77,17 +77,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'shelter',
-        'USER': 'postgres',
-        'HOST': 'localhost',
-        'PORT': 5432,
-        'PASSWORD': 123456,
 
-    }
-}
 
 
 # Password validation

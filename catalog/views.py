@@ -36,6 +36,7 @@ class ProductCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
+        context_data['formset'] = get_cached_versons_for_product(self.object.pk)
         SubjectFormset = inlineformset_factory(Product, Version, extra=1)
         if self.request.method == 'POST':
             context_data['formset'] = SubjectFormset(self.request.POST, instance=self.object)
